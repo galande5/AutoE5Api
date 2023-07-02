@@ -45,7 +45,7 @@ def exec_api(token, url):
         logging.error('調用失敗 %s', url)
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s', level=logging.DEBUG)
 
     refresh_token_path=sys.path[0]+r'/refresh_token.txt'
     client_id = os.getenv('CLIENT_ID')
