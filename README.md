@@ -9,7 +9,3 @@ Mail.Read
 MailboxSettings.Read
 Directory.ReadWrite.All
 
-
-
-
-https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/CallAnAPI/appId/aae75ebc-fcf8-4058-b3f8-f00f43401680/isMSAApp~/false
