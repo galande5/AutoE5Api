@@ -1,88 +1,83 @@
 # -*- coding: UTF-8 -*-
 import os
+import json
+import sys
+import random
 import requests as req
-import json,sys,time,random
 #先註冊azure應用,確保應用有以下權限:
 #files:	Files.Read.All、Files.ReadWrite.All、Sites.Read.All、Sites.ReadWrite.All
 #user:	User.Read.All、User.ReadWrite.All、Directory.Read.All、Directory.ReadWrite.All
 #mail:  Mail.Read、Mail.ReadWrite、MailboxSettings.Read、MailboxSettings.ReadWrite
 #註冊後一定要再點代表xxx授予管理員同意,否則outlook api無法調用
 
-path=sys.path[0]+r'/refresh_token.txt'
-path2=sys.path[0]+r'/time.log'
-num1 = 0
+def gettoken(token_path, client_id, client_secret):
+    fo = open(refresh_token_path, "r+", encoding="utf-8")
+    refresh_token = fo.read()
+    fo.close()
 
-id = os.getenv('CLIENT_ID')
-secret = os.getenv('CLIENT_SECRET')
-
-def gettoken(refresh_token):
-    headers={'Content-Type':'application/x-www-form-urlencoded'
-            }
+    headers={'Content-Type':'application/x-www-form-urlencoded'}
     data={'grant_type': 'refresh_token',
           'refresh_token': refresh_token,
-          'client_id':id,
-          'client_secret':secret,
+          'client_id':client_id,
+          'client_secret':client_secret,
           'redirect_uri':'http://localhost:53682/'
          }
-    html = req.post('https://login.microsoftonline.com/common/oauth2/v2.0/token',data=data,headers=headers)
+    html = req.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', data=data,headers=headers)
     jsontxt = json.loads(html.text)
     refresh_token = jsontxt['refresh_token']
-    access_token = jsontxt['access_token']
-    with open(path, 'w+') as f:
+    ms_access_token = jsontxt['access_token']
+    with open(token_path, 'w+', encoding="utf-8") as f:
         f.write(refresh_token)
-    return access_token
+    return ms_access_token
     
-def main():
-    fo = open(path, "r+")
-    refresh_token = fo.read()
-    fo.close() 
-    fv = open(path2, "r+")
-    timelog = fv.read()
-    fv.close()
-    global num1
-    localtime = time.asctime( time.localtime(time.time()) )
-    access_token=gettoken(refresh_token)
+def exec_api(token, url):
     headers={
-    'Authorization':access_token,
-    'Content-Type':'application/json'
+        'Authorization': token,
+        'Content-Type':'application/json'
     }
-    try:
-        if req.get(r'https://graph.microsoft.com/v1.0/me/drive/root',headers=headers).status_code == 200:
-            num1+=1
-            print("1調用成功"+str(num1)+'次')
-        if req.get(r'https://graph.microsoft.com/v1.0/me/drive',headers=headers).status_code == 200:
-            num1+=1
-            print("2調用成功"+str(num1)+'次')
-        if req.get(r'https://graph.microsoft.com/v1.0/drive/root',headers=headers).status_code == 200:
-            num1+=1
-            print('3調用成功'+str(num1)+'次')
-        if req.get(r'https://graph.microsoft.com/v1.0/users ',headers=headers).status_code == 200:
-            num1+=1
-            print('4調用成功'+str(num1)+'次')
-        if req.get(r'https://graph.microsoft.com/v1.0/me/messages',headers=headers).status_code == 200:
-            num1+=1
-            print('5調用成功'+str(num1)+'次')    
-        if req.get(r'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messageRules',headers=headers).status_code == 200:
-            num1+=1
-            print('6調用成功'+str(num1)+'次')    
-        if req.get(r'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messageRules',headers=headers).status_code == 200:
-            num1+=1
-            print('7調用成功'+str(num1)+'次')
-        if req.get(r'https://graph.microsoft.com/v1.0/me/drive/root/children',headers=headers).status_code == 200:
-            num1+=1
-            print('8調用成功'+str(num1)+'次')
-        if req.get(r'https://api.powerbi.com/v1.0/myorg/apps',headers=headers).status_code == 200:
-            num1+=1
-            print('8調用成功'+str(num1)+'次') 
-        if req.get(r'https://graph.microsoft.com/v1.0/me/mailFolders',headers=headers).status_code == 200:
-            num1+=1
-            print('9調用成功'+str(num1)+'次')
-        if req.get(r'https://graph.microsoft.com/v1.0/me/outlook/masterCategories',headers=headers).status_code == 200:
-            num1+=1
-            print('10調用成功'+str(num1)+'次')
-            print('此次運行時間為 :', localtime)
-    except:
-        print("pass")
-        pass
-for _ in range(random.randint(10,100)):
-    main()
+    if req.get(url, headers=headers, timeout=60).status_code == 200:
+        print(f"調用成功 {url}")
+    else:
+        print(f"調用失敗 {url}")
+
+if __name__ == '__main__':
+    refresh_token_path=sys.path[0]+r'/refresh_token.txt'
+    client_id = os.getenv('CLIENT_ID')
+    client_secret = os.getenv('CLIENT_SECRET')
+
+    access_token=gettoken(refresh_token_path, client_id, client_secret)
+
+    api_list = [
+            r'https://graph.microsoft.com/v1.0/me/',
+            r'https://graph.microsoft.com/v1.0/users',
+            r'https://graph.microsoft.com/v1.0/me/people',
+            r'https://graph.microsoft.com/v1.0/groups',
+            r'https://graph.microsoft.com/v1.0/me/contacts',
+            r'https://graph.microsoft.com/v1.0/me/drive/root',
+            r'https://graph.microsoft.com/v1.0/me/drive/root/children',
+            r'https://graph.microsoft.com/v1.0/drive/root',
+            r'https://graph.microsoft.com/v1.0/me/drive',
+            r'https://graph.microsoft.com/v1.0/me/drive/recent',
+            r'https://graph.microsoft.com/v1.0/me/drive/sharedWithMe',
+            r'https://graph.microsoft.com/v1.0/me/calendars',
+            r'https://graph.microsoft.com/v1.0/me/events',
+            r'https://graph.microsoft.com/v1.0/sites/root',
+            r'https://graph.microsoft.com/v1.0/sites/root/sites',
+            r'https://graph.microsoft.com/v1.0/sites/root/drives',
+            r'https://graph.microsoft.com/v1.0/sites/root/columns',
+            r'https://graph.microsoft.com/v1.0/me/onenote/notebooks',
+            r'https://graph.microsoft.com/v1.0/me/onenote/sections',
+            r'https://graph.microsoft.com/v1.0/me/onenote/pages',
+            r'https://graph.microsoft.com/v1.0/me/messages',
+            r'https://graph.microsoft.com/v1.0/me/mailFolders',
+            r'https://graph.microsoft.com/v1.0/me/outlook/masterCategories',
+            r'https://graph.microsoft.com/v1.0/me/mailFolders/Inbox/messages/delta',
+            r'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messageRules',
+            r"https://graph.microsoft.com/v1.0/me/messages?$filter=importance eq 'high'",
+            r'https://graph.microsoft.com/v1.0/me/messages?$search="hello world"',
+            r'https://graph.microsoft.com/beta/me/messages?$select=internetMessageHeaders&$top',
+            ]
+    for _ in range(random.randint(10,100)):
+        random.shuffle(api_list)
+        for api in api_list:
+            exec_api(access_token, api)
