@@ -3,6 +3,8 @@ import os
 import json
 import sys
 import random
+import time
+import logging
 import requests as req
 #先註冊azure應用,確保應用有以下權限:
 #files:	Files.Read.All、Files.ReadWrite.All、Sites.Read.All、Sites.ReadWrite.All
@@ -22,8 +24,10 @@ def gettoken(token_path, client_id, client_secret):
           'client_secret':client_secret,
           'redirect_uri':'http://localhost:53682/'
          }
+    logging.debug('gettoken data %s', data)
     html = req.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', data=data,headers=headers)
     jsontxt = json.loads(html.text)
+    logging.debug('gettoken result %s', html.text)
     refresh_token = jsontxt['refresh_token']
     ms_access_token = jsontxt['access_token']
     with open(token_path, 'w+', encoding="utf-8") as f:
@@ -36,11 +40,13 @@ def exec_api(token, url):
         'Content-Type':'application/json'
     }
     if req.get(url, headers=headers, timeout=60).status_code == 200:
-        print(f"調用成功 {url}")
+        logging.info('調用成功 %s', url)
     else:
-        print(f"調用失敗 {url}")
+        logging.error('調用失敗 %s', url)
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
+
     refresh_token_path=sys.path[0]+r'/refresh_token.txt'
     client_id = os.getenv('CLIENT_ID')
     client_secret = os.getenv('CLIENT_SECRET')
@@ -76,8 +82,11 @@ if __name__ == '__main__':
             r"https://graph.microsoft.com/v1.0/me/messages?$filter=importance eq 'high'",
             r'https://graph.microsoft.com/v1.0/me/messages?$search="hello world"',
             r'https://graph.microsoft.com/beta/me/messages?$select=internetMessageHeaders&$top',
+            r'https://api.powerbi.com/v1.0/myorg/apps'
             ]
     for _ in range(random.randint(10,100)):
         random.shuffle(api_list)
         for api in api_list:
             exec_api(access_token, api)
+            time.sleep(random.randint(0,5))
+        logging.info("完成 %d", _)
